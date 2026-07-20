@@ -21,7 +21,7 @@ function parseEnvFile(contents: string): Record<string, string> {
 
         if (
             (value.startsWith('"') && value.endsWith('"')) ||
-            (value.startsWith("'") && value.endsWith("'"))
+            (value.startsWith('\'') && value.endsWith('\''))
         ) {
             value = value.slice(1, -1);
         }
@@ -60,14 +60,14 @@ export function loadConfig(): NexployConfig {
     if (!cliKeyHash) {
         throw new Error(
             `No recovery key configured for this instance (missing NEXPLOY_CLI_KEY_HASH in ${secretsFile}).\n` +
-                'Generate one with: curl -fsSL https://nexploy.app/install.sh | sh -s rotate-cli-key',
+            'Generate one with: curl -fsSL https://nexploy.app/install.sh | sh -s rotate-cli-key',
         );
     }
 
     if (!databaseUrl) {
         throw new Error(
             `Could not find NEXPLOY_CLI_DATABASE_URL in ${secretsFile}. This Nexploy installation ` +
-                'predates nexploy-cli support — reinstall or upgrade Nexploy to add it.',
+            'predates nexploy-cli support — reinstall or upgrade Nexploy to add it.',
         );
     }
 

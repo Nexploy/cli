@@ -14,9 +14,7 @@ function matchesHash(candidate: string, expectedHashHex: string): boolean {
 }
 
 export async function authorize(expectedHashHex: string): Promise<void> {
-    const provided = process.env.NEXPLOY_CLI_KEY;
-
-    let key = provided;
+    let key = process.env.NEXPLOY_CLI_KEY;
     if (!key) {
         const response = await prompts({
             type: 'password',

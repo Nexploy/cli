@@ -44,8 +44,14 @@ sudo nexploy admin reset-password
 
 ## Development
 
+Reads and writes go through a [Prisma](https://www.prisma.io) client, but
+`prisma/schema.prisma` declares no models — this package doesn't own the
+Nexploy schema and must not duplicate it. It only uses `$queryRaw`/
+`$executeRaw` (tagged templates, so values are parameterized, not
+string-concatenated) against the same database.
+
 ```bash
-pnpm install # or npm install
-pnpm run dev -- admin reset-password
-pnpm run build
+npm install        # also runs `prisma generate` via postinstall
+npm run dev -- admin reset-password
+npm run build       # regenerates the Prisma client, then bundles with tsup
 ```

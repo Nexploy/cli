@@ -8,25 +8,27 @@
     "nexploy": "dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "prisma"
   ],
   "engines": {
     "node": ">=18"
   },
   "scripts": {
-    "build": "tsup",
+    "postinstall": "prisma generate --schema=./prisma/schema.prisma",
+    "build": "prisma generate --schema=./prisma/schema.prisma && tsup",
     "dev": "tsx src/index.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@prisma/client": "^6.2.1",
     "better-auth": "^1.6.20",
     "commander": "^12.1.0",
-    "pg": "^8.13.1",
+    "prisma": "^6.2.1",
     "prompts": "^2.4.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
-    "@types/pg": "^8.11.10",
     "@types/prompts": "^2.4.9",
     "tsup": "^8.3.5",
     "tsx": "^4.19.2",

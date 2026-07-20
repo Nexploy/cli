@@ -1,0 +1,12 @@
+// No models here on purpose: this package doesn't own the Nexploy schema
+// and must not duplicate it. It only uses PrismaClient's $queryRaw/$executeRaw
+// against the same database, for parameterized (non-injectable) custom SQL.
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}

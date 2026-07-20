@@ -5,6 +5,7 @@ export default defineConfig({
     format: ['esm'],
     target: 'node18',
     platform: 'node',
+    external: ['@prisma/client', '.prisma/client'],
     clean: true,
     banner: {
         js: '#!/usr/bin/env node',

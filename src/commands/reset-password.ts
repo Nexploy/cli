@@ -1,7 +1,8 @@
+import type { PrismaClient } from '@prisma/client';
 import { hashPassword } from 'better-auth/crypto';
 import { authorize } from '../lib/authorize.js';
 import { loadConfig } from '../lib/config.js';
-import { connect } from '../lib/db.js';
+import { createPrismaClient } from '../lib/db.js';
 import { randomPassword } from '../lib/randomPassword.js';
 
 interface UserRow {
@@ -9,21 +10,24 @@ interface UserRow {
     email: string;
 }
 
+interface AccountRow {
+    id: string;
+}
+
 export async function resetPassword(options: { email?: string }): Promise<void> {
     const config = loadConfig();
     await authorize(config.cliKeyHash);
 
-    const client = await connect(config.databaseUrl);
+    const prisma = createPrismaClient(config.databaseUrl);
 
     try {
-        const user = await resolveUser(client, options.email);
+        const user = await resolveUser(prisma, options.email);
 
-        const accountResult = await client.query<{ id: string }>(
-            `SELECT id FROM account WHERE "userId" = $1 AND "providerId" = 'credential' LIMIT 1`,
-            [user.id],
-        );
+        const accounts = await prisma.$queryRaw<AccountRow[]>`
+            SELECT id FROM account WHERE "userId" = ${user.id} AND "providerId" = 'credential' LIMIT 1
+        `;
+        const account = accounts[0];
 
-        const account = accountResult.rows[0];
         if (!account) {
             throw new Error(
                 `${user.email} has no password-based (email/password) login — it may be an OAuth-only account.`,
@@ -33,11 +37,12 @@ export async function resetPassword(options: { email?: string }): Promise<void> 
         const newPassword = randomPassword();
         const hashed = await hashPassword(newPassword);
 
-        await client.query(
-            `UPDATE account SET password = $1, "updatedAt" = now() WHERE id = $2`,
-            [hashed, account.id],
-        );
-        await client.query(`DELETE FROM session WHERE "userId" = $1`, [user.id]);
+        await prisma.$transaction([
+            prisma.$executeRaw`
+                UPDATE account SET password = ${hashed}, "updatedAt" = now() WHERE id = ${account.id}
+            `,
+            prisma.$executeRaw`DELETE FROM session WHERE "userId" = ${user.id}`,
+        ]);
 
         console.log('');
         console.log(`Password reset for ${user.email}`);
@@ -48,38 +53,36 @@ export async function resetPassword(options: { email?: string }): Promise<void> 
         console.log('Log in with this password now and change it right away.');
         console.log('');
     } finally {
-        await client.end();
+        await prisma.$disconnect();
     }
 }
 
-async function resolveUser(
-    client: Awaited<ReturnType<typeof connect>>,
-    email: string | undefined,
-): Promise<UserRow> {
+async function resolveUser(prisma: PrismaClient, email: string | undefined): Promise<UserRow> {
     if (email) {
-        const result = await client.query<UserRow>(
-            `SELECT id, email FROM "user" WHERE email = $1 LIMIT 1`,
-            [email],
-        );
-        const user = result.rows[0];
+        const rows = await prisma.$queryRaw<UserRow[]>`
+            SELECT id, email FROM "user" WHERE email = ${email} LIMIT 1
+        `;
+        const user = rows[0];
         if (!user) {
             throw new Error(`No user found with email ${email}.`);
         }
         return user;
     }
 
-    const result = await client.query<UserRow>(`SELECT id, email FROM "user" WHERE role = 'admin'`);
+    const admins = await prisma.$queryRaw<UserRow[]>`
+        SELECT id, email FROM "user" WHERE role = 'admin'
+    `;
 
-    if (result.rows.length === 0) {
+    if (admins.length === 0) {
         throw new Error('No admin user found. Pass --email <email> to target a specific user.');
     }
 
-    if (result.rows.length > 1) {
-        const emails = result.rows.map((row) => row.email).join(', ');
+    if (admins.length > 1) {
+        const emails = admins.map((admin) => admin.email).join(', ');
         throw new Error(
             `Multiple admin users found (${emails}). Pass --email <email> to pick one.`,
         );
     }
 
-    return result.rows[0];
+    return admins[0];
 }

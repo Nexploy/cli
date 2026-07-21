@@ -1,9 +1,12 @@
 {
-  "name": "nexploy-cli",
+  "name": "@nexploy/cli",
   "version": "0.1.0",
   "description": "Recovery CLI for self-hosted Nexploy instances — acts directly on the server database using the recovery key generated at install time.",
   "license": "GPL-3.0",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "bin": {
     "nexploy": "dist/index.js"
   },
@@ -21,10 +24,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@prisma/client": "^6.2.1",
+    "@prisma/adapter-pg": "^7.9.0",
+    "@prisma/client": "^7.9.0",
     "better-auth": "^1.6.20",
     "commander": "^12.1.0",
-    "prisma": "^6.2.1",
+    "prisma": "^7.9.0",
     "prompts": "^2.4.2"
   },
   "devDependencies": {
@@ -33,5 +37,12 @@
     "tsup": "^8.3.5",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
+  },
+  "allowScripts": {
+    "@prisma/engines@7.9.0": true,
+    "esbuild@0.27.7": true,
+    "esbuild@0.28.1": true,
+    "fsevents@2.3.3": true,
+    "prisma@7.9.0": true
   }
 }

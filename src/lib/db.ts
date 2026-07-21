@@ -1,9 +1,8 @@
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
 export function createPrismaClient(databaseUrl: string): PrismaClient {
     return new PrismaClient({
-        datasources: {
-            db: { url: databaseUrl },
-        },
+        adapter: new PrismaPg({ connectionString: databaseUrl }),
     });
 }

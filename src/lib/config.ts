@@ -4,6 +4,7 @@ import { join } from 'node:path';
 export interface NexployConfig {
     databaseUrl: string;
     cliKeyHash: string;
+    configDir: string;
 }
 
 function parseEnvFile(contents: string): Record<string, string> {
@@ -74,5 +75,6 @@ export function loadConfig(): NexployConfig {
     return {
         databaseUrl,
         cliKeyHash,
+        configDir,
     };
 }

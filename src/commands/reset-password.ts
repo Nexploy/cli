@@ -1,9 +1,12 @@
 import type { PrismaClient } from '@prisma/client';
 import { hashPassword } from 'better-auth/crypto';
+import { auditLog } from '../lib/audit.js';
 import { authorize } from '../lib/authorize.js';
 import { loadConfig } from '../lib/config.js';
 import { createPrismaClient } from '../lib/db.js';
 import { randomPassword } from '../lib/randomPassword.js';
+
+const ACTION = 'admin.reset-password';
 
 interface UserRow {
     id: string;
@@ -16,7 +19,18 @@ interface AccountRow {
 
 export async function resetPassword(options: { email?: string }): Promise<void> {
     const config = loadConfig();
-    await authorize(config.cliKeyHash);
+
+    try {
+        await authorize(config.cliKeyHash);
+    } catch (error) {
+        auditLog(config.configDir, {
+            action: ACTION,
+            outcome: 'failure',
+            target: options.email,
+            reason: 'invalid recovery key',
+        });
+        throw error;
+    }
 
     const prisma = createPrismaClient(config.databaseUrl);
 
@@ -24,7 +38,11 @@ export async function resetPassword(options: { email?: string }): Promise<void> 
         const user = await resolveUser(prisma, options.email);
 
         const accounts = await prisma.$queryRaw<AccountRow[]>`
-            SELECT id FROM account WHERE "userId" = ${user.id} AND "providerId" = 'credential' LIMIT 1
+            SELECT id
+            FROM account
+            WHERE "userId" = ${user.id}
+              AND "providerId" = 'credential'
+            LIMIT 1
         `;
         const account = accounts[0];
 
@@ -39,10 +57,17 @@ export async function resetPassword(options: { email?: string }): Promise<void> 
 
         await prisma.$transaction([
             prisma.$executeRaw`
-                UPDATE account SET password = ${hashed}, "updatedAt" = now() WHERE id = ${account.id}
+                UPDATE account
+                SET password    = ${hashed},
+                    "updatedAt" = now()
+                WHERE id = ${account.id}
             `,
-            prisma.$executeRaw`DELETE FROM session WHERE "userId" = ${user.id}`,
+            prisma.$executeRaw`DELETE
+                               FROM session
+                               WHERE "userId" = ${user.id}`,
         ]);
+
+        auditLog(config.configDir, { action: ACTION, outcome: 'success', target: user.email });
 
         console.log('');
         console.log(`Password reset for ${user.email}`);
@@ -52,6 +77,14 @@ export async function resetPassword(options: { email?: string }): Promise<void> 
         console.log('All active sessions for this user were revoked.');
         console.log('Log in with this password now and change it right away.');
         console.log('');
+    } catch (error) {
+        auditLog(config.configDir, {
+            action: ACTION,
+            outcome: 'failure',
+            target: options.email,
+            reason: (error as Error).message,
+        });
+        throw error;
     } finally {
         await prisma.$disconnect();
     }
@@ -60,7 +93,10 @@ export async function resetPassword(options: { email?: string }): Promise<void> 
 async function resolveUser(prisma: PrismaClient, email: string | undefined): Promise<UserRow> {
     if (email) {
         const rows = await prisma.$queryRaw<UserRow[]>`
-            SELECT id, email FROM "user" WHERE email = ${email} LIMIT 1
+            SELECT id, email
+            FROM "user"
+            WHERE email = ${email}
+            LIMIT 1
         `;
         const user = rows[0];
         if (!user) {
@@ -70,7 +106,9 @@ async function resolveUser(prisma: PrismaClient, email: string | undefined): Pro
     }
 
     const admins = await prisma.$queryRaw<UserRow[]>`
-        SELECT id, email FROM "user" WHERE role = 'admin'
+        SELECT id, email
+        FROM "user"
+        WHERE role = 'admin'
     `;
 
     if (admins.length === 0) {

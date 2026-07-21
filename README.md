@@ -1,4 +1,4 @@
-# nexploy-cli
+# @nexploy/cli
 
 Recovery CLI for self-hosted [Nexploy](https://nexploy.app) instances.
 
@@ -9,7 +9,7 @@ works if the app itself is down, misconfigured, or its admin password is lost.
 ## Install
 
 ```bash
-npm install -g nexploy-cli
+npm install -g @nexploy/cli
 ```
 
 ## Setup
@@ -42,6 +42,14 @@ non-admin account.
 sudo nexploy admin reset-password
 ```
 
+## Audit log
+
+Every `admin` action (success or failure — invalid key, user not found, etc.)
+is appended as a JSON line to `<NEXPLOY_DIR>/cli-audit.log` (default
+`/etc/nexploy/cli-audit.log`), root-only (`0600`). Each entry records a
+timestamp, host, OS user, action, outcome, and target — never the generated
+password itself.
+
 ## Development
 
 Reads and writes go through a [Prisma](https://www.prisma.io) client, but
@@ -54,4 +62,14 @@ string-concatenated) against the same database.
 npm install        # also runs `prisma generate` via postinstall
 npm run dev -- admin reset-password
 npm run build       # regenerates the Prisma client, then bundles with tsup
+```
+
+## Releasing
+
+Publishing to npm happens in CI (`.github/workflows/publish.yml`) via trusted
+publishing (OIDC, no stored token) whenever a `v*` tag is pushed:
+
+```bash
+npm version patch   # or minor/major
+git push --follow-tags
 ```

@@ -4,6 +4,7 @@ import { auditLog } from '../lib/audit.js';
 import { authorize } from '../lib/authorize.js';
 import { loadConfig } from '../lib/config.js';
 import { createPrismaClient } from '../lib/db.js';
+import { resolvePostgresUrl } from '../lib/docker.js';
 import { randomPassword } from '../lib/randomPassword.js';
 
 const ACTION = 'admin.reset-password';
@@ -32,9 +33,11 @@ export async function resetPassword(options: { email?: string }): Promise<void> 
         throw error;
     }
 
-    const prisma = createPrismaClient(config.databaseUrl);
+    let prisma: PrismaClient | undefined;
 
     try {
+        prisma = createPrismaClient(resolvePostgresUrl());
+
         const user = await resolveUser(prisma, options.email);
 
         const accounts = await prisma.$queryRaw<AccountRow[]>`
@@ -86,7 +89,7 @@ export async function resetPassword(options: { email?: string }): Promise<void> 
         });
         throw error;
     } finally {
-        await prisma.$disconnect();
+        await prisma?.$disconnect();
     }
 }
 

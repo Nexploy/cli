@@ -4,6 +4,10 @@
   "description": "Recovery CLI for self-hosted Nexploy instances — acts directly on the server database using the recovery key generated at install time.",
   "license": "GPL-3.0",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Nexploy/cli"
+  },
   "publishConfig": {
     "access": "public"
   },

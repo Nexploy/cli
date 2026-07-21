@@ -72,8 +72,11 @@ export function loadConfig(): NexployConfig {
         );
     }
 
+    const postgresHost = values.POSTGRES_HOST ?? '127.0.0.1';
+    const postgresPort = values.POSTGRES_PORT ?? '5432';
+
     const databaseUrl =
-        `postgresql://nexploy:${encodeURIComponent(postgresPassword)}@127.0.0.1:5432/nexploy`;
+        `postgresql://nexploy:${encodeURIComponent(postgresPassword)}@${postgresHost}:${postgresPort}/nexploy`;
 
     return {
         databaseUrl,

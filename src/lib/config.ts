@@ -55,7 +55,7 @@ export function loadConfig(): NexployConfig {
 
     const values = parseEnvFile(contents);
 
-    const databaseUrl = values.NEXPLOY_CLI_DATABASE_URL;
+    const postgresPassword = values.POSTGRES_PASSWORD;
     const cliKeyHash = values.NEXPLOY_CLI_KEY_HASH;
 
     if (!cliKeyHash) {
@@ -65,12 +65,15 @@ export function loadConfig(): NexployConfig {
         );
     }
 
-    if (!databaseUrl) {
+    if (!postgresPassword) {
         throw new Error(
-            `Could not find NEXPLOY_CLI_DATABASE_URL in ${secretsFile}. This Nexploy installation ` +
+            `Could not find POSTGRES_PASSWORD in ${secretsFile}. This Nexploy installation ` +
             'predates nexploy-cli support — reinstall or upgrade Nexploy to add it.',
         );
     }
+
+    const databaseUrl =
+        `postgresql://nexploy:${encodeURIComponent(postgresPassword)}@127.0.0.1:5432/nexploy`;
 
     return {
         databaseUrl,

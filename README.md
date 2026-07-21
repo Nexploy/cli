@@ -18,6 +18,10 @@ Nothing to configure: `nexploy-cli` reads `/etc/nexploy/nexploy.env`, the
 secrets file written by Nexploy's `install.sh`. Override the location with
 `NEXPLOY_DIR` if Nexploy was installed elsewhere.
 
+It connects to Postgres as `postgresql://nexploy:<POSTGRES_PASSWORD>@127.0.0.1:5432/nexploy`,
+building that URL itself from the `POSTGRES_PASSWORD` value in the secrets
+file — no full connection string needs to be stored.
+
 Every command requires the **recovery key** shown once when Nexploy was
 installed (or after running `rotate-cli-key`, if it was lost). You'll be
 prompted for it, or pass it non-interactively via the `NEXPLOY_CLI_KEY`

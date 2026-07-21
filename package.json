@@ -1,6 +1,6 @@
 {
   "name": "@nexploy/cli",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Recovery CLI for self-hosted Nexploy instances — acts directly on the server database using the recovery key generated at install time.",
   "license": "GPL-3.0",
   "type": "module",

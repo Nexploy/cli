@@ -19,7 +19,7 @@ import { loadConfig } from '../lib/config.js';
 import { POSTGRES_CONTAINER, readPostgresCredentials } from '../lib/docker.js';
 
 const ACTION = 'security.unpublish-database';
-const DEPENDENT_CONTAINERS = ['nexploy_app'];
+const DEPENDENT_CONTAINERS = ['nexploy_app', 'nexploy_docker_api'];
 const HEALTH_TIMEOUT_SECONDS = 120;
 
 export interface UnpublishDatabaseOptions {
@@ -107,6 +107,7 @@ export async function unpublishDatabase(options: UnpublishDatabaseOptions): Prom
     }
 
     let backupPath: string | undefined;
+    const stopped: string[] = [];
 
     try {
         if (!options.skipBackup) {
@@ -114,10 +115,10 @@ export async function unpublishDatabase(options: UnpublishDatabaseOptions): Prom
             console.log(`Backup written to ${backupPath}`);
         }
 
-        const stopped = DEPENDENT_CONTAINERS.filter(containerExists);
-        for (const name of stopped) {
+        for (const name of DEPENDENT_CONTAINERS.filter(containerExists)) {
             console.log(`Stopping ${name}…`);
             docker(['stop', name]);
+            stopped.push(name);
         }
 
         console.log(`Removing ${POSTGRES_CONTAINER}…`);
@@ -142,11 +143,6 @@ export async function unpublishDatabase(options: UnpublishDatabaseOptions): Prom
 
         await waitUntilHealthy(POSTGRES_CONTAINER, HEALTH_TIMEOUT_SECONDS);
 
-        for (const name of stopped) {
-            console.log(`Starting ${name}…`);
-            docker(['start', name]);
-        }
-
         const remaining = publishedPorts(inspectContainer(POSTGRES_CONTAINER));
         if (remaining.length > 0) {
             throw new Error(
@@ -159,11 +155,6 @@ export async function unpublishDatabase(options: UnpublishDatabaseOptions): Prom
             outcome: 'success',
             target: POSTGRES_CONTAINER,
         });
-
-        console.log('');
-        console.log(`${POSTGRES_CONTAINER} no longer publishes any host port.`);
-        console.log('The database is reachable only from the Docker network and via docker exec.');
-        console.log('');
     } catch (error) {
         auditLog(config.configDir, {
             action: ACTION,
@@ -172,6 +163,25 @@ export async function unpublishDatabase(options: UnpublishDatabaseOptions): Prom
             reason: (error as Error).message,
         });
         throw error;
+    } finally {
+        restartDependents(stopped);
+    }
+
+    console.log('');
+    console.log(`${POSTGRES_CONTAINER} no longer publishes any host port.`);
+    console.log('The database is reachable only from the Docker network and via docker exec.');
+    console.log('');
+}
+
+function restartDependents(names: string[]): void {
+    for (const name of names) {
+        try {
+            console.log(`Starting ${name}…`);
+            docker(['start', name]);
+        } catch (error) {
+            console.error(`Could not start ${name}: ${(error as Error).message}`);
+            console.error(`Start it manually with: docker start ${name}`);
+        }
     }
 }
 
